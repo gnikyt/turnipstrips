@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Main strip handler file.
+# Will run the subhandlers such as process and combnine.
+# Syntax:
+#   bin/strip [slug] [title] [date] [width]x
+# Example:
+#   bin/strip slush-run "Slush run" 2022-12-23 1200x
+
+# Variables
+slug="$1"
+title="$2"
+date="$3"
+width="$4"
+
+# Run processing
+processcmd="bin/strip-process"
+. "$processcmd" "$slug" "$title" "$date"
+
+# Run combination
+combinecmd="bin/strip-combine"
+. "$combinecmd" "$slug" "$width"

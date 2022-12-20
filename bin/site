@@ -1,0 +1,109 @@
+#!/usr/bin/env python
+# Generate the website content.
+# Syntax:
+#   bin/site
+# Example:
+#   bin/site
+
+import json
+import shutil
+import os
+from datetime import datetime
+
+# Get the strip template
+def strip_template():
+  html = ""
+  with open("static/_strip.html", "r") as f:
+    html = f.read()
+  return html
+
+# Get a list of strips, sorted by date.
+def sorted_strips():
+  # Slice of strips by date
+  strips = []
+
+  # Open the info file
+  for dir in os.listdir("strips"):
+    with open(f"strips/{dir}/info.json", "r") as f:
+      info = json.loads(f.read())
+      strips.append(info)
+
+  # Sort... new to old
+  strips = sorted(strips, key=lambda d: d["date"], reverse=True)
+  return strips
+
+# Generate a strip directory to store the page
+def generate_strip_dir(strip):
+  path = os.path.join("static", strip["slug"])
+  if os.path.exists(path):
+    shutil.rmtree(path)
+  os.mkdir(path)
+
+# Generate a page for a strip
+def generate_strip_page(strip, tpl, next_strip, previous_strip, strips):
+  # Base data replacements
+  tpl = tpl \
+    .replace("{{ title }}", strip["title"]) \
+    .replace("{{ slug }}", strip["slug"]) \
+    .replace("{{ date_ymd }}", strip["date"]) \
+    .replace(
+      "{{ date_human }}",
+      datetime.strftime(datetime.strptime(strip["date"], "%Y-%m-%d"), "%d %b, %Y")
+    ) \
+    .replace("{{ combined }}", f'/{strip["slug"]}/combined.jpg')
+
+  # Archives
+  archives = ''.join([f'<li><a href="/{s["slug"]}">{s["title"]}</a></li>' for s in strips])
+  tpl = tpl.replace("{{ archives }}", archives)
+
+  # Next/prev replacements
+  if next_strip:
+    tpl = tpl.replace("{{ next }}", f'<li class="next">Next: <a href="/{next_strip["slug"]}">{next_strip["title"]}</a></li>')
+  else:
+    tpl = tpl.replace("{{ next }}", "")
+  if previous_strip:
+    tpl = tpl.replace("{{ previous }}", f'<li class="prev">Prev: <a href="/{previous_strip["slug"]}">{previous_strip["title"]}</a></li>')
+  else:
+    tpl = tpl.replace("{{ previous }}", "")
+  return tpl
+
+# Place in the needed files for the strip page
+def generate_index_page(strip, html):
+  # Create index page
+  with open(f'static/index.html', "w") as f:
+    f.write(html)
+
+# Place in the needed files for the strip page
+def place_strip_page_assets(strip, html):
+  # Create index page
+  with open(f'static/{strip["slug"]}/index.html', "w") as f:
+    f.write(html)
+
+  # Move strip image in
+  shutil.copy(f'strips/{strip["slug"]}/combined.jpg', f'static/{strip["slug"]}/')
+
+if __name__ == "__main__":
+  # Get strip template
+  tpl = strip_template()
+
+  # Get strips
+  strips = sorted_strips()
+
+  # For each strip, create a page
+  last_idx = len(strips) - 1
+  for index, strip in enumerate(strips):
+    next_strip = strips[index + 1] if index + 1 <= last_idx else None
+    prev_strip = strips[index - 1] if index - 1 >= 0 else None
+
+    # Create dir
+    generate_strip_dir(strip)
+
+    # Produce the HTML
+    html = generate_strip_page(strip, tpl, next_strip, prev_strip, strips)
+
+    # Save the page
+    place_strip_page_assets(strip, html)
+
+    if index == 0:
+      # Create the index page containting the latest strip
+      generate_index_page(strip, html)

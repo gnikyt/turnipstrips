@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# After all images are downloaded to a strip folder,
+# this script can rename all images to their index by
+# date and do other post-processing actions.
+# Syntax:
+#   bin/strip-process [slug] [title] [date]
+# Example:
+#   bin/strip-process slush-run "Slush run" 2022-12-23
+
+# Variables
+slug="$1"
+title="$2"
+date="$3"
+
+# Sort files by date (modified)
+strips=($(find strips/"$slug" -type f -name '*.jpg' ! -name 'combined.jpg' -printf "%T+\t%p\n" | sort | awk '{print $2}'))
+
+# Loop all strips
+i=1
+for s in "${strips[@]}"; do
+  # Replace the original filename with index name
+  basename=$(basename "$s")
+  mv "$s" "${s/$basename/$i.jpg}"
+  i=$((i + 1))
+done
+
+# Create info JSON
+json=$(printf '{"slug":"%s","title":"%s","date":"%s","strips":%d}\n' "$slug" "$title" "$date" "${#strips[@]}")
+echo "$json" > strips/"$slug"/info.json

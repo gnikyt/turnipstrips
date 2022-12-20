@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Combines all images in the post's directory.
+# Adds a black 15 size frame between each image.
+# Resizes everything to specified size.
+# Syntax:
+#   bin/strip-combine [slug] [width]x
+# Example:
+#   bin/strip-combine slush-run 1200x
+
+# Variables
+slug="$1"
+width="$2"
+
+# Find a count of the strip images
+strip_count=$(find strips/"$slug" -mindepth 1 -type f -name '*.jpg' ! -name 'combined.jpg' -printf x | wc -c)
+
+# Imagick command
+convert \
+  -frame 15 \
+  -mattecolor black \
+  -gravity center \
+  -background transparent \
+  -resize "$width"x \
+  -quality 80 \
+  -append $(eval echo strips/"$slug"/{1..$strip_count}.jpg) \
+  strips/"$slug"/combined.jpg
